@@ -1,0 +1,18 @@
+[
+  {
+    "certification": "CE Mark",
+    "definition": "Conformité Européenne certification indicating safety, health, and environmental protection standards for products sold within the European Economic Area."
+  },
+  {
+    "certification": "UL 508C",
+    "definition": "Underwriters Laboratories safety standard for power conversion equipment including industrial variable frequency drives and motor controllers."
+  },
+  {
+    "certification": "IP65 Rating",
+    "definition": "Ingress Protection rating indicating dust-tight protection and protection against water jets from any direction."
+  },
+  {
+    "certification": "RoHS Compliance",
+    "definition": "Restriction of Hazardous Substances directive restricting the use of specific hazardous materials in electrical and electronic products."
+  }
+]

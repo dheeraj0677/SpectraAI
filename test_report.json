@@ -1,0 +1,459 @@
+{
+  "timestamp": "2026-08-05T16:57:24.212993",
+  "total": 90,
+  "passed": 90,
+  "failed": 0,
+  "pass_rate": "100.0%",
+  "results": [
+    {
+      "test": "Provenance model instantiation",
+      "status": "[PASS]",
+      "detail": "source_id=pdf_abc123"
+    },
+    {
+      "test": "FieldValue status='extracted'",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "FieldValue status='enriched'",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "FieldValue status='conflicted'",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "FieldValue status='human_verified'",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "FieldValue status='missing'",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "FieldValue status='needs_review'",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "FieldValue value type=int",
+      "status": "[PASS]",
+      "detail": "value=42"
+    },
+    {
+      "test": "FieldValue value type=float",
+      "status": "[PASS]",
+      "detail": "value=3.14"
+    },
+    {
+      "test": "FieldValue value type=str",
+      "status": "[PASS]",
+      "detail": "value=hello"
+    },
+    {
+      "test": "FieldValue value type=bool",
+      "status": "[PASS]",
+      "detail": "value=True"
+    },
+    {
+      "test": "FieldValue value type=None",
+      "status": "[PASS]",
+      "detail": "value=None"
+    },
+    {
+      "test": "Full ProductRecord creation",
+      "status": "[PASS]",
+      "detail": "id=TEST-001, fields=2"
+    },
+    {
+      "test": "ProductRecord JSON round-trip",
+      "status": "[PASS]",
+      "detail": "JSON size=1402 bytes"
+    },
+    {
+      "test": "Detect 'datasheet.pdf' \u2192 pdf",
+      "status": "[PASS]",
+      "detail": "expected=pdf"
+    },
+    {
+      "test": "Detect 'nameplate.jpg' \u2192 image",
+      "status": "[PASS]",
+      "detail": "expected=image"
+    },
+    {
+      "test": "Detect 'nameplate.png' \u2192 image",
+      "status": "[PASS]",
+      "detail": "expected=image"
+    },
+    {
+      "test": "Detect 'erp.csv' \u2192 csv",
+      "status": "[PASS]",
+      "detail": "expected=csv"
+    },
+    {
+      "test": "Register CSV source",
+      "status": "[PASS]",
+      "detail": "source_id=csv_b6595a182a82, type=csv"
+    },
+    {
+      "test": "Source ID hash prefix",
+      "status": "[PASS]",
+      "detail": "csv_b6595a182a82"
+    },
+    {
+      "test": "PDF fallback extraction returns fields",
+      "status": "[PASS]",
+      "detail": "fields=['product_name', 'manufacturer', 'model_number', 'category', 'weight_kg', 'voltage', 'description_long', 'certifications']"
+    },
+    {
+      "test": "PDF: product_name has value",
+      "status": "[PASS]",
+      "detail": "value='UltraDrive X500 Industrial Inverter Motor'"
+    },
+    {
+      "test": "PDF: product_name has provenance",
+      "status": "[PASS]",
+      "detail": "provenance_count=1"
+    },
+    {
+      "test": "PDF: provenance has location",
+      "status": "[PASS]",
+      "detail": "Page 1, Header"
+    },
+    {
+      "test": "PDF: provenance has raw_snippet",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "PDF: voltage extracted",
+      "status": "[PASS]",
+      "detail": "value='480V', unit='V'"
+    },
+    {
+      "test": "Image fallback extraction returns fields",
+      "status": "[PASS]",
+      "detail": "fields=['model_number', 'voltage', 'power_watts', 'sku']"
+    },
+    {
+      "test": "Image: voltage extracted",
+      "status": "[PASS]",
+      "detail": "value='460V'"
+    },
+    {
+      "test": "Image: voltage differs from PDF (conflict engineered)",
+      "status": "[PASS]",
+      "detail": "PDF=480V vs Image=460V"
+    },
+    {
+      "test": "CSV extraction returns fields",
+      "status": "[PASS]",
+      "detail": "fields=['product_name', 'model_number', 'country_of_origin']"
+    },
+    {
+      "test": "CSV: product_name extracted",
+      "status": "[PASS]",
+      "detail": "value='UltraDrive X500'"
+    },
+    {
+      "test": "CSV: confidence is high (0.95)",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Merge: sources agree \u2192 boosted confidence",
+      "status": "[PASS]",
+      "detail": "conf=1.0"
+    },
+    {
+      "test": "Merge: sources agree \u2192 status='extracted'",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Merge: provenance combined",
+      "status": "[PASS]",
+      "detail": "prov_count=2"
+    },
+    {
+      "test": "Merge: sources disagree \u2192 status='conflicted'",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Merge: conflict \u2192 confidence penalized (0.7x)",
+      "status": "[PASS]",
+      "detail": "conf=0.64"
+    },
+    {
+      "test": "Merge: conflict_candidates populated",
+      "status": "[PASS]",
+      "detail": "candidates=2"
+    },
+    {
+      "test": "Full merge: combined field count",
+      "status": "[PASS]",
+      "detail": "merged_fields=['product_name', 'manufacturer', 'model_number', 'category', 'weight_kg', 'voltage', 'description_long', 'certifications', 'power_watts', 'sku', 'country_of_origin']"
+    },
+    {
+      "test": "Full merge: voltage is CONFLICTED",
+      "status": "[PASS]",
+      "detail": "status=conflicted"
+    },
+    {
+      "test": "Seed KB documents loaded",
+      "status": "[PASS]",
+      "detail": "doc_count=13"
+    },
+    {
+      "test": "Retriever: category query returns matches",
+      "status": "[PASS]",
+      "detail": "match_count=5"
+    },
+    {
+      "test": "Enrichment: warranty filled from KB",
+      "status": "[PASS]",
+      "detail": "warranty='24 Months Standard Warranty'"
+    },
+    {
+      "test": "Enrichment: warranty provenance is 'rag_enrichment'",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Enrichment: certifications filled",
+      "status": "[PASS]",
+      "detail": "certs_count=1"
+    },
+    {
+      "test": "Enrichment: accessories filled from taxonomy",
+      "status": "[PASS]",
+      "detail": "accessories=['Braking Resistor Module', 'Monting Flange Kit', 'Encoder Feedback Cable']"
+    },
+    {
+      "test": "Seed graph pre-populated",
+      "status": "[PASS]",
+      "detail": "nodes=5, edges=4"
+    },
+    {
+      "test": "Product added to graph",
+      "status": "[PASS]",
+      "detail": "total_nodes=8"
+    },
+    {
+      "test": "Category edge created",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Category siblings found",
+      "status": "[PASS]",
+      "detail": "siblings=['prod_ref_101', 'prod_ref_102']"
+    },
+    {
+      "test": "Consistency check: normal weight \u2192 no warnings",
+      "status": "[PASS]",
+      "detail": "warnings=0"
+    },
+    {
+      "test": "Consistency check: outlier weight \u2192 WARNING flagged",
+      "status": "[PASS]",
+      "detail": "warning='Weight (5000.0 kg) deviates significantly from category average (46.4 kg) across...'"
+    },
+    {
+      "test": "Graph export: has nodes",
+      "status": "[PASS]",
+      "detail": "nodes=9"
+    },
+    {
+      "test": "Graph export: has links",
+      "status": "[PASS]",
+      "detail": "links=8"
+    },
+    {
+      "test": "Voltage sanity: 480V \u2192 valid",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Voltage sanity: 0V \u2192 invalid",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Numeric range: 48.5 in [0.01, 50000] \u2192 valid",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Numeric range: -5 in [0.01, 50000] \u2192 invalid",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Validation: overall_confidence computed",
+      "status": "[PASS]",
+      "detail": "overall=0.89"
+    },
+    {
+      "test": "Validation: review_status set",
+      "status": "[PASS]",
+      "detail": "status=pending"
+    },
+    {
+      "test": "Validation: invalid weight \u2192 needs_review",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Validation: invalid weight \u2192 confidence halved",
+      "status": "[PASS]",
+      "detail": "conf=0.4"
+    },
+    {
+      "test": "Database initialized",
+      "status": "[PASS]",
+      "detail": "path=C:\\Users\\Dheer\\Desktop\\MY PROJECTS\\UNIHACK\\SpectraAI\\backend\\product_intelligence.db"
+    },
+    {
+      "test": "Source save & retrieve",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Product save & retrieve",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Product specs preserved",
+      "status": "[PASS]",
+      "detail": "voltage=240V"
+    },
+    {
+      "test": "List products",
+      "status": "[PASS]",
+      "detail": "count=1"
+    },
+    {
+      "test": "Edit log save & retrieve",
+      "status": "[PASS]",
+      "detail": "edits_count=1"
+    },
+    {
+      "test": "Edit log content correct",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Pipeline: product created",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Pipeline: product_id correct",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Pipeline: product_name populated",
+      "status": "[PASS]",
+      "detail": "name='UltraDrive X500 Industrial Inverter Motor'"
+    },
+    {
+      "test": "Pipeline: manufacturer populated",
+      "status": "[PASS]",
+      "detail": "mfr='Vortex Dynamics Tech'"
+    },
+    {
+      "test": "Pipeline: model_number populated",
+      "status": "[PASS]",
+      "detail": "model='VD-X500-480V-3P'"
+    },
+    {
+      "test": "Pipeline: category populated",
+      "status": "[PASS]",
+      "detail": "cat='Industrial Motors & Drives'"
+    },
+    {
+      "test": "Pipeline: specifications count",
+      "status": "[PASS]",
+      "detail": "spec_count=3"
+    },
+    {
+      "test": "Pipeline: overall_confidence computed",
+      "status": "[PASS]",
+      "detail": "conf=0.89"
+    },
+    {
+      "test": "Pipeline: review_status set",
+      "status": "[PASS]",
+      "detail": "status=needs_review"
+    },
+    {
+      "test": "Pipeline: voltage field exists",
+      "status": "[PASS]",
+      "detail": "value=460V, status=conflicted"
+    },
+    {
+      "test": "Pipeline: voltage is CONFLICTED (460V vs 480V)",
+      "status": "[PASS]",
+      "detail": "status=conflicted"
+    },
+    {
+      "test": "Pipeline: conflict candidates surfaced",
+      "status": "[PASS]",
+      "detail": "candidates=['480V', '460V']"
+    },
+    {
+      "test": "Pipeline: product persisted to SQLite",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Human edit: field updated",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Human edit: voltage set to 480V",
+      "status": "[PASS]",
+      "detail": "value=480V"
+    },
+    {
+      "test": "Human edit: status \u2192 human_verified",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Human edit: confidence \u2192 1.0",
+      "status": "[PASS]",
+      "detail": "conf=1.0"
+    },
+    {
+      "test": "Human edit: provenance trail extended",
+      "status": "[PASS]",
+      "detail": "prov_count=3"
+    },
+    {
+      "test": "Human edit: log entry added",
+      "status": "[PASS]",
+      "detail": "log_count=1"
+    },
+    {
+      "test": "Approve: record approved",
+      "status": "[PASS]",
+      "detail": "status=approved"
+    },
+    {
+      "test": "Audit trail: edits persisted in DB",
+      "status": "[PASS]",
+      "detail": "db_edits=2"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+[
+  {
+    "category": "Industrial Motors & Drives",
+    "voltage_range": [110, 690],
+    "weight_kg_range": [5.0, 250.0],
+    "power_watts_range": [250, 75000]
+  },
+  {
+    "category": "Industrial Controllers & PLCs",
+    "voltage_range": [12, 240],
+    "weight_kg_range": [0.2, 10.0],
+    "power_watts_range": [5, 100]
+  }
+]

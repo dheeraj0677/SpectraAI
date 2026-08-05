@@ -1,0 +1,6 @@
+[
+  {"field": "voltage", "standard_unit": "V", "aliases": ["volts", "v ac", "v dc", "v"], "typical_format": "e.g. 120V, 230V, 480V"},
+  {"field": "power_watts", "standard_unit": "W", "aliases": ["kw", "hp", "watts", "kilowatts"], "typical_format": "Convert kW to W (1 kW = 1000 W) or HP to W (1 HP = 745.7 W)"},
+  {"field": "weight_kg", "standard_unit": "kg", "aliases": ["lbs", "kilograms", "pounds", "kg"], "typical_format": "Convert lbs to kg (1 lb = 0.453592 kg)"},
+  {"field": "operating_temp", "standard_unit": "°C", "aliases": ["deg c", "celsius", "fahrenheit", "°f"], "typical_format": "Standard range e.g. -20°C to 60°C"}
+]

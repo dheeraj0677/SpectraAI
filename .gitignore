@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Build outputs
+dist/
+frontend/dist/
+
+# Python cache & databases
+__pycache__/
+*.pyc
+*.db
+backend/product_intelligence.db
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Environment & IDE
+.env
+.env.local
+.vscode/
+.idea/
+*.log

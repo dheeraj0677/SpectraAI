@@ -1,0 +1,23 @@
+[
+  {
+    "category": "Industrial Motors & Drives",
+    "description": "Electric motors, variable frequency drives (VFDs), servo drives, and industrial gearmotors.",
+    "standard_specifications": ["voltage", "power_watts", "frequency_hz", "weight_kg", "rpm", "operating_temp", "ip_rating"],
+    "typical_certifications": ["CE", "UL 508C", "RoHS", "ISO 9001", "IP65"],
+    "common_accessories": ["Braking Resistor Module", "Monting Flange Kit", "Encoder Feedback Cable"]
+  },
+  {
+    "category": "Industrial Controllers & PLCs",
+    "description": "Programmable Logic Controllers, I/O modules, human-machine interfaces (HMIs), and automation gateways.",
+    "standard_specifications": ["supply_voltage", "io_points", "communication_protocols", "memory_kb", "operating_temp"],
+    "typical_certifications": ["UL", "CE", "ATEX", "Class 1 Div 2"],
+    "common_accessories": ["EtherNet/IP Gateway", "Expansion I/O Card", "DIN Rail Mounting Bracket"]
+  },
+  {
+    "category": "Flow Control & Valves",
+    "description": "Solenoid valves, pneumatic actuators, pressure regulators, and industrial flowmeters.",
+    "standard_specifications": ["max_pressure_psi", "flow_rate_lpm", "port_size_inches", "body_material", "operating_temp"],
+    "typical_certifications": ["CE", "FDA Approved Seals", "NEMA 4X"],
+    "common_accessories": ["Position Indicator Switch", "Pneumatic Tubing Kit", "Manual Override Lever"]
+  }
+]
