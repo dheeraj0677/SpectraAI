@@ -2,7 +2,7 @@ import hashlib
 import shutil
 from pathlib import Path
 from typing import Literal
-from models import SourceDocument
+from backend.models import SourceDocument
 
 UPLOAD_DIR = Path(__file__).parent / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)

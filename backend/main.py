@@ -1,3 +1,7 @@
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 import asyncio
 import json
 import uuid
@@ -8,12 +12,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 
-import database
-import ingest
-import pipeline
-import human_review
-import knowledge_graph
-from models import ProductRecord, HumanEditRequest, PipelineRunRequest
+import backend.database as database
+import backend.ingest as ingest
+import backend.pipeline as pipeline
+import backend.human_review as human_review
+import backend.knowledge_graph as knowledge_graph
+from backend.models import ProductRecord, HumanEditRequest, PipelineRunRequest
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("main")
@@ -68,6 +72,30 @@ async def upload_files(files: List[UploadFile] = File(...)):
         await database.save_source(source_doc)
         registered_sources.append(source_doc.model_dump())
     return {"status": "success", "uploaded_sources": registered_sources}
+
+@app.post("/api/demo/load-sample")
+async def load_sample_batch(background_tasks: BackgroundTasks):
+    """Load pre-packaged multimodal sample batch (PDF + Image + CSV) and trigger pipeline."""
+    sample_sources = [
+        {"name": "datasheet_ultradrive_x500.pdf", "content": b"%PDF-1.5 UltraDrive X500 Industrial Inverter Motor Datasheet 480V 50kW"},
+        {"name": "nameplate_motor_vfd.jpg", "content": b"NAMEPLATE IMAGE DATA 460V 5000W SKU-VD-X500"},
+        {"name": "erp_catalog_export.csv", "content": b"product_name,manufacturer,model_number,sku\nUltraDrive X500,Vortex Dynamics Tech,VD-X500-480V-3P,SKU-VD-X500"}
+    ]
+    
+    source_ids = []
+    for sample in sample_sources:
+        source_doc = ingest.save_uploaded_file(sample["content"], sample["name"])
+        await database.save_source(source_doc)
+        source_ids.append(source_doc.source_id)
+        
+    job_id = str(uuid.uuid4())[:8]
+    background_tasks.add_task(
+        pipeline.run_product_intelligence_pipeline,
+        source_ids=source_ids,
+        product_id=f"PROD-SAMPLE-{job_id}",
+        job_id=job_id
+    )
+    return {"status": "started", "job_id": job_id, "sample_sources": source_ids}
 
 @app.post("/api/pipeline/run")
 async def run_pipeline(req: PipelineRunRequest, background_tasks: BackgroundTasks):

@@ -17,8 +17,8 @@ from datetime import datetime
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
-# Add backend to path
-sys.path.insert(0, str(Path(__file__).parent / "backend"))
+# Add project root to sys.path
+sys.path.insert(0, str(Path(__file__).parent))
 
 # ────────────────────────────────────────────────────────────────
 # Test utilities
@@ -43,7 +43,7 @@ def section(title):
 # ────────────────────────────────────────────────────────────────
 def test_data_models():
     section("1. PYDANTIC DATA MODEL VALIDATION")
-    from models import Provenance, FieldValue, ProductRecord, SourceDocument
+    from backend.models import Provenance, FieldValue, ProductRecord, SourceDocument
 
     # Test Provenance creation
     try:
@@ -111,7 +111,7 @@ def test_data_models():
 # ────────────────────────────────────────────────────────────────
 def test_ingestion():
     section("2. INGESTION & SOURCE REGISTRATION")
-    from ingest import register_source, detect_source_type, save_uploaded_file
+    from backend.ingest import register_source, detect_source_type, save_uploaded_file
 
     # Test type detection
     for fname, expected in [("datasheet.pdf", "pdf"), ("nameplate.jpg", "image"), ("nameplate.png", "image"), ("erp.csv", "csv")]:
@@ -133,7 +133,7 @@ def test_ingestion():
 # ────────────────────────────────────────────────────────────────
 def test_extraction():
     section("3. MULTIMODAL EXTRACTION (Fallback/Demo Mode)")
-    from extract import extract_from_pdf, extract_from_image, extract_from_csv
+    from backend.extract import extract_from_pdf, extract_from_image, extract_from_csv
 
     # PDF extraction (fallback)
     pdf_fields = extract_from_pdf("fake_datasheet.pdf", "pdf_test123")
@@ -178,8 +178,8 @@ def test_extraction():
 # ────────────────────────────────────────────────────────────────
 def test_merge(pdf_fields, img_fields, csv_fields):
     section("4. MULTI-SOURCE MERGE & CONFLICT RESOLUTION")
-    from merge import merge_field, merge_extractions
-    from models import FieldValue, Provenance
+    from backend.merge import merge_field, merge_extractions
+    from backend.models import FieldValue, Provenance
 
     # Test: All sources agree → confidence boost
     candidates_agree = [
@@ -222,8 +222,8 @@ def test_merge(pdf_fields, img_fields, csv_fields):
 # ────────────────────────────────────────────────────────────────
 def test_enrichment():
     section("5. RAG ENRICHMENT (Seed Knowledge Base)")
-    from enrich import enrich_missing_fields, load_seed_documents, EmbeddedRetriever
-    from models import ProductRecord, FieldValue
+    from backend.enrich import enrich_missing_fields, load_seed_documents, EmbeddedRetriever
+    from backend.models import ProductRecord, FieldValue
 
     # Test seed document loading
     docs = load_seed_documents()
@@ -261,8 +261,8 @@ def test_enrichment():
 # ────────────────────────────────────────────────────────────────
 def test_knowledge_graph():
     section("6. NETWORKX KNOWLEDGE GRAPH")
-    from knowledge_graph import G, add_product_to_graph, find_category_siblings, check_consistency, export_graph_json
-    from models import ProductRecord, FieldValue
+    from backend.knowledge_graph import G, add_product_to_graph, find_category_siblings, check_consistency, export_graph_json
+    from backend.models import ProductRecord, FieldValue
 
     initial_nodes = len(G.nodes)
     record("Seed graph pre-populated", initial_nodes > 0, f"nodes={initial_nodes}, edges={len(G.edges)}")
@@ -321,8 +321,8 @@ def test_knowledge_graph():
 # ────────────────────────────────────────────────────────────────
 def test_validation():
     section("7. BUSINESS RULES VALIDATION & CONFIDENCE SCORING")
-    from validate import validate_record, check_voltage_sanity, check_numeric_range
-    from models import ProductRecord, FieldValue
+    from backend.validate import validate_record, check_voltage_sanity, check_numeric_range
+    from backend.models import ProductRecord, FieldValue
 
     # Unit checks
     record("Voltage sanity: 480V → valid", check_voltage_sanity("480V"))
@@ -372,8 +372,8 @@ def test_validation():
 # ────────────────────────────────────────────────────────────────
 async def test_database():
     section("8. SQLITE DATABASE PERSISTENCE")
-    from database import init_db, save_product, get_product, list_products, save_source, get_source, log_edit, get_product_edits, DB_PATH
-    from models import ProductRecord, FieldValue, SourceDocument
+    from backend.database import init_db, save_product, get_product, list_products, save_source, get_source, log_edit, get_product_edits, DB_PATH
+    from backend.models import ProductRecord, FieldValue, SourceDocument
 
     # Ensure clean state for test
     if DB_PATH.exists():
@@ -421,8 +421,8 @@ async def test_database():
 # ────────────────────────────────────────────────────────────────
 async def test_pipeline():
     section("9. END-TO-END PIPELINE INTEGRATION")
-    from pipeline import run_product_intelligence_pipeline
-    from database import init_db, get_product
+    from backend.pipeline import run_product_intelligence_pipeline
+    from backend.database import init_db, get_product
 
     await init_db()
 
@@ -451,6 +451,13 @@ async def test_pipeline():
             record("Pipeline: conflict candidates surfaced", len(v.conflict_candidates) >= 2,
                    f"candidates={[c.get('value') for c in v.conflict_candidates]}")
 
+    # Unilog Industrial Commerce Features Verification
+    record("Pipeline: UNSPSC code assigned", product.unspsc_code is not None and product.unspsc_code.value is not None, f"unspsc='{product.unspsc_code.value if product.unspsc_code else None}'")
+    record("Pipeline: ETIM class assigned", product.etim_class is not None and product.etim_class.value is not None, f"etim='{product.etim_class.value if product.etim_class else None}'")
+    record("Pipeline: CRI score computed", product.commerce_readiness_score > 0, f"CRI={product.commerce_readiness_score}%")
+    record("Pipeline: SEO title synthesized", product.seo_title is not None and product.seo_title.value is not None, f"seo='{product.seo_title.value if product.seo_title else None}'")
+    record("Pipeline: Interchangeable parts matched", len(product.interchangeable_parts) > 0, f"matches={len(product.interchangeable_parts)}")
+
     # Verify persisted to database
     db_product = await get_product("E2E-TEST-001")
     record("Pipeline: product persisted to SQLite", db_product is not None)
@@ -462,8 +469,8 @@ async def test_pipeline():
 # ────────────────────────────────────────────────────────────────
 async def test_human_review(product):
     section("10. HUMAN-IN-THE-LOOP REVIEW & AUDIT TRAIL")
-    from human_review import log_human_edit, approve_record
-    from database import init_db, get_product, get_product_edits
+    from backend.human_review import log_human_edit, approve_record
+    from backend.database import init_db, get_product, get_product_edits
 
     await init_db()
 

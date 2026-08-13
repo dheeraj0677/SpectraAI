@@ -1,6 +1,6 @@
 import re
 from typing import Dict, Any, Callable
-from models import ProductRecord, FieldValue
+from backend.models import ProductRecord, FieldValue
 
 # Rule definitions: field -> validation lambda or function returning bool
 VALIDATION_RULES: Dict[str, Callable[[Any], bool]] = {
@@ -77,5 +77,38 @@ def validate_record(record: ProductRecord) -> ProductRecord:
             record.review_status = "needs_review"
         else:
             record.review_status = "pending"
+
+    # 5. Commerce Readiness Index (CRI) Scorecard Calculation (0-100%)
+    identity_score = 0.0
+    if record.product_name and record.product_name.value: identity_score += 8.0
+    if record.manufacturer and record.manufacturer.value: identity_score += 8.0
+    if record.model_number and record.model_number.value: identity_score += 9.0
+
+    specs_score = min(25.0, len(record.specifications) * 8.33)
+
+    taxonomy_score = 0.0
+    if record.category and record.category.value: taxonomy_score += 8.0
+    if record.unspsc_code and record.unspsc_code.value: taxonomy_score += 6.0
+    if record.etim_class and record.etim_class.value: taxonomy_score += 6.0
+
+    content_score = 0.0
+    if record.description_short and record.description_short.value: content_score += 5.0
+    if record.description_long and record.description_long.value: content_score += 5.0
+    if record.seo_title and record.seo_title.value: content_score += 5.0
+
+    quality_score = 15.0
+    if has_conflicts: quality_score -= 8.0
+    if overall < 0.85: quality_score -= 5.0
+    quality_score = max(0.0, quality_score)
+
+    cri_total = round(identity_score + specs_score + taxonomy_score + content_score + quality_score, 1)
+    record.commerce_readiness_score = min(100.0, max(0.0, cri_total))
+    record.cri_breakdown = {
+        "identity_completeness": round(identity_score, 1),
+        "specifications_depth": round(specs_score, 1),
+        "taxonomy_compliance": round(taxonomy_score, 1),
+        "commerce_content": round(content_score, 1),
+        "quality_and_accuracy": round(quality_score, 1)
+    }
 
     return record

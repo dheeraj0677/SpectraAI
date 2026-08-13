@@ -1,5 +1,5 @@
 from typing import Dict, List, Any
-from models import FieldValue, Provenance, ProductRecord
+from backend.models import FieldValue, Provenance, ProductRecord
 
 def merge_field(field_name: str, candidates: List[FieldValue]) -> FieldValue:
     if not candidates:

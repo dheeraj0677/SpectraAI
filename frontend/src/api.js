@@ -23,6 +23,14 @@ export async function startPipeline(sourceIds, productId = null) {
   return res.json();
 }
 
+export async function loadSampleBatch() {
+  const res = await fetch(`${API_BASE}/demo/load-sample`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error('Sample batch trigger failed');
+  return res.json();
+}
+
 export async function fetchProducts() {
   const res = await fetch(`${API_BASE}/products`);
   if (!res.ok) throw new Error('Failed to fetch products');
