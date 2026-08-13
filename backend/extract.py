@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 import anthropic
-from models import FieldValue, Provenance
+from backend.models import FieldValue, Provenance
 
 logger = logging.getLogger("extract")
 

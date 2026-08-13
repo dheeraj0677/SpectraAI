@@ -1,6 +1,6 @@
 import networkx as nx
 from typing import Dict, Any, List, Optional
-from models import ProductRecord
+from backend.models import ProductRecord, FieldValue
 
 # Global NetworkX directed graph
 G = nx.DiGraph()
@@ -88,6 +88,32 @@ def check_consistency(record: ProductRecord) -> List[Dict[str, Any]]:
             pass
 
     return warnings
+
+def find_interchangeable_parts(record: ProductRecord) -> List[Dict[str, Any]]:
+    """Find substitute / cross-reference parts based on graph category & spec similarity."""
+    siblings = find_category_siblings(record)
+    interchanges = []
+    
+    current_volt = record.specifications.get("voltage", FieldValue()).value
+    
+    for sib_id in siblings:
+        node_data = G.nodes.get(sib_id, {})
+        label = node_data.get("label", sib_id)
+        sib_volt = node_data.get("voltage")
+        
+        # Calculate compatibility match score
+        match_score = 85.0
+        if current_volt and sib_volt and str(current_volt) == str(sib_volt):
+            match_score += 10.0
+            
+        interchanges.append({
+            "product_id": sib_id,
+            "product_name": label,
+            "match_confidence": round(match_score, 1),
+            "reason": f"Matches category '{node_data.get('category')}' and spec baseline ({sib_volt or 'Standard Specs'})."
+        })
+        
+    return interchanges
 
 def export_graph_json() -> Dict[str, Any]:
     """Export graph for D3 force-directed visualization in React."""

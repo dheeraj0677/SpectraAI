@@ -2,7 +2,7 @@ import aiosqlite
 import json
 from typing import List, Optional, Dict, Any
 from pathlib import Path
-from models import ProductRecord, SourceDocument
+from backend.models import ProductRecord, SourceDocument
 
 DB_PATH = Path(__file__).parent / "product_intelligence.db"
 

@@ -1,7 +1,7 @@
 {
-  "timestamp": "2026-08-05T16:57:24.212993",
-  "total": 90,
-  "passed": 90,
+  "timestamp": "2026-08-13T16:22:35.053983",
+  "total": 95,
+  "passed": 95,
   "failed": 0,
   "pass_rate": "100.0%",
   "results": [
@@ -73,7 +73,7 @@
     {
       "test": "ProductRecord JSON round-trip",
       "status": "[PASS]",
-      "detail": "JSON size=1402 bytes"
+      "detail": "JSON size=1533 bytes"
     },
     {
       "test": "Detect 'datasheet.pdf' \u2192 pdf",
@@ -409,6 +409,31 @@
       "test": "Pipeline: conflict candidates surfaced",
       "status": "[PASS]",
       "detail": "candidates=['480V', '460V']"
+    },
+    {
+      "test": "Pipeline: UNSPSC code assigned",
+      "status": "[PASS]",
+      "detail": "unspsc='26101100 - Electric Motors'"
+    },
+    {
+      "test": "Pipeline: ETIM class assigned",
+      "status": "[PASS]",
+      "detail": "etim='EC001851 (Electric Motor)'"
+    },
+    {
+      "test": "Pipeline: CRI score computed",
+      "status": "[PASS]",
+      "detail": "CRI=92.0%"
+    },
+    {
+      "test": "Pipeline: SEO title synthesized",
+      "status": "[PASS]",
+      "detail": "seo='Vortex Dynamics Tech UltraDrive X500 Industrial Inverter Motor 460V 15000W Model VD-X500-480V-3P'"
+    },
+    {
+      "test": "Pipeline: Interchangeable parts matched",
+      "status": "[PASS]",
+      "detail": "matches=4"
     },
     {
       "test": "Pipeline: product persisted to SQLite",

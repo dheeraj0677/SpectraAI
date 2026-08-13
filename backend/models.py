@@ -36,6 +36,14 @@ class ProductRecord(BaseModel):
     description_long: FieldValue = Field(default_factory=FieldValue)
     key_features: List[FieldValue] = Field(default_factory=list)
 
+    # Industrial Taxonomy & E-Commerce Standards
+    unspsc_code: Optional[FieldValue] = None
+    etim_class: Optional[FieldValue] = None
+    commerce_readiness_score: float = 0.0
+    cri_breakdown: Dict[str, float] = Field(default_factory=dict)
+    seo_title: Optional[FieldValue] = None
+    interchangeable_parts: List[Dict[str, Any]] = Field(default_factory=list)
+
     # Technical specs (open-ended, category-dependent)
     specifications: Dict[str, FieldValue] = Field(default_factory=dict)   # e.g. {"voltage": FieldValue, "weight_kg": FieldValue}
 

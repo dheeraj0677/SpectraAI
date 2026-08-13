@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Upload, FileText, Image, Table, Play, CheckCircle2 } from 'lucide-react';
-import { uploadFiles, startPipeline } from '../api';
+import { Upload, FileText, Image, Table, Play, CheckCircle2, Sparkles } from 'lucide-react';
+import { uploadFiles, startPipeline, loadSampleBatch } from '../api';
 
 export default function UploadPanel({ onPipelineStarted }) {
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -15,9 +15,7 @@ export default function UploadPanel({ onPipelineStarted }) {
 
   const handleUploadAndRun = async () => {
     if (selectedFiles.length === 0) {
-      // Run with pre-seeded demo files if none chosen
-      const res = await startPipeline(['pdf_demo', 'image_demo', 'csv_demo']);
-      onPipelineStarted(res.job_id);
+      handleLoadSample();
       return;
     }
 
@@ -37,6 +35,19 @@ export default function UploadPanel({ onPipelineStarted }) {
     }
   };
 
+  const handleLoadSample = async () => {
+    setIsUploading(true);
+    try {
+      const sampleRes = await loadSampleBatch();
+      onPipelineStarted(sampleRes.job_id);
+    } catch (err) {
+      console.error('Error loading sample batch:', err);
+      alert('Failed to load sample batch: ' + err.message);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const getIconForType = (name) => {
     const ext = name.split('.').pop().toLowerCase();
     if (ext === 'pdf') return <FileText size={18} className="text-red-400" />;
@@ -46,7 +57,32 @@ export default function UploadPanel({ onPipelineStarted }) {
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {/* Sample Batch Quick Button */}
+      <button
+        onClick={handleLoadSample}
+        disabled={isUploading}
+        style={{
+          background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(59, 130, 246, 0.2))',
+          border: '1px solid rgba(6, 182, 212, 0.5)',
+          color: '#38bdf8',
+          borderRadius: '8px',
+          padding: '10px 14px',
+          fontWeight: 600,
+          fontSize: '0.85rem',
+          cursor: isUploading ? 'not-allowed' : 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          boxShadow: '0 0 15px rgba(6, 182, 212, 0.15)',
+          transition: 'all 0.2s ease'
+        }}
+      >
+        <Sparkles size={16} />
+        {isUploading ? 'Ingesting Sample Batch...' : 'Load Sample Batch (PDF + Image + CSV)'}
+      </button>
+
       <div 
         className="upload-dropzone"
         onClick={() => document.getElementById('file-input').click()}
@@ -94,7 +130,7 @@ export default function UploadPanel({ onPipelineStarted }) {
         disabled={isUploading}
       >
         <Play size={16} />
-        {isUploading ? 'Uploading Sources...' : selectedFiles.length > 0 ? 'Run Intelligence Pipeline' : 'Run Demo Pipeline'}
+        {isUploading ? 'Uploading Sources...' : selectedFiles.length > 0 ? 'Run Intelligence Pipeline' : 'Run Pipeline on Selected Files'}
       </button>
     </div>
   );

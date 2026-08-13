@@ -3,14 +3,14 @@ import logging
 import uuid
 from typing import List, Dict, Any, Callable, Optional
 from datetime import datetime, timezone
-from models import ProductRecord, FieldValue, SourceDocument, Provenance
-import database
-import ingest
-import extract
-import merge
-import enrich
-import knowledge_graph
-import validate
+from backend.models import ProductRecord, FieldValue, SourceDocument, Provenance
+import backend.database as database
+import backend.ingest as ingest
+import backend.extract as extract
+import backend.merge as merge
+import backend.enrich as enrich
+import backend.knowledge_graph as knowledge_graph
+import backend.validate as validate
 
 logger = logging.getLogger("pipeline")
 
@@ -115,6 +115,7 @@ async def run_product_intelligence_pipeline(
     tracker.update("knowledge_graph", 85, "Expanding NetworkX Knowledge Graph & verifying cross-catalog consistency...")
     knowledge_graph.add_product_to_graph(record)
     consistency_warnings = knowledge_graph.check_consistency(record)
+    record.interchangeable_parts = knowledge_graph.find_interchangeable_parts(record)
 
     # Stage 6: Validation & Confidence Scoring
     tracker.update("validation", 95, "Executing validation rules & calculating field confidence scores...")

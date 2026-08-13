@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, Union
-from models import ProductRecord, FieldValue, Provenance
-import database
+from backend.models import ProductRecord, FieldValue, Provenance
+import backend.database as database
 
 async def log_human_edit(
     record: ProductRecord,
@@ -88,7 +88,7 @@ async def log_human_edit(
     )
     
     # Re-validate record status
-    from validate import validate_record
+    from backend.validate import validate_record
     record = validate_record(record)
     
     # Save updated product
