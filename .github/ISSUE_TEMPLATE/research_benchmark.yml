@@ -1,0 +1,19 @@
+name: Research & Benchmark Proposal
+description: Propose an evaluation benchmark, prompt optimization, or taxonomy reasoning experiment.
+title: "[RESEARCH]: "
+labels: ["dataset/benchmark", "enhancement"]
+body:
+  - type: textarea
+    id: proposal-overview
+    attributes:
+      label: Research / Benchmark Overview
+      description: What hypothesis, evaluation harness, or taxonomy extension are you proposing?
+    validations:
+      required: true
+  - type: textarea
+    id: metrics-and-eval
+    attributes:
+      label: Proposed Evaluation Metrics
+      description: How will improvements in extraction precision, recall, conflict resolution, or CRI score be measured?
+    validations:
+      required: true

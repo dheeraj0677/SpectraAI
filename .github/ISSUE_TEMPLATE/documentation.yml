@@ -1,0 +1,19 @@
+name: Documentation Improvement
+description: Suggest improvements or report errors in documentation.
+title: "[DOCS]: "
+labels: ["documentation", "triage"]
+body:
+  - type: textarea
+    id: doc-location
+    attributes:
+      label: Documentation Page or Section
+      description: Which file or section needs updating (e.g. `docs/api-contract.md`, `README.md`)?
+    validations:
+      required: true
+  - type: textarea
+    id: doc-description
+    attributes:
+      label: Description of Changes Needed
+      description: What is missing, inaccurate, or unclear?
+    validations:
+      required: true

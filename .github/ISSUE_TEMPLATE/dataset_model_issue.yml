@@ -1,0 +1,30 @@
+name: Dataset & Model Issue
+description: Report an issue with extraction accuracy, fixture schema, VLM parsing, or unit normalization.
+title: "[DATA/MODEL]: "
+labels: ["dataset/benchmark", "triage"]
+body:
+  - type: textarea
+    id: issue-summary
+    attributes:
+      label: Summary of Discrepancy
+      description: Describe the extraction, merge, or normalization discrepancy observed.
+    validations:
+      required: true
+  - type: textarea
+    id: input-fixture
+    attributes:
+      label: Input Data Sample
+      description: Paste the non-sensitive raw snippet or file type (e.g. PDF table, image nameplate, CSV row).
+    validations:
+      required: true
+  - type: textarea
+    id: actual-vs-expected
+    attributes:
+      label: Actual Output vs. Expected Output
+      description: |
+        - Extracted Field:
+        - Raw Value / Unit:
+        - Actual Normalized Value / Status:
+        - Expected Value / Status:
+    validations:
+      required: true
