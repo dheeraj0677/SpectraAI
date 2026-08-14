@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: GitHub Community Discussions
+    url: https://github.com/dheeraj0677/SpectraAI/discussions
+    about: Ask questions, share ideas, and connect with other community members.
+  - name: Security Vulnerability Reporting
+    url: https://github.com/dheeraj0677/SpectraAI/security/advisories/new
+    about: Report security issues privately following our security policy.

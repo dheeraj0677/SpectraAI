@@ -2,10 +2,12 @@
   "name": "spectra-ai",
   "private": true,
   "version": "1.0.0",
+  "packageManager": "npm@11.6.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "test": "node test_smoke.js",
     "preview": "vite preview"
   },
   "dependencies": {

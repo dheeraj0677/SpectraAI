@@ -11,11 +11,7 @@ import io
 import json
 import asyncio
 from pathlib import Path
-from datetime import datetime
-
-# Fix Windows console encoding
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+from datetime import datetime, timezone
 
 # Add project root to sys.path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -411,7 +407,7 @@ async def test_database():
     record("List products", len(products) > 0, f"count={len(products)}")
 
     # Log and retrieve edits
-    await log_edit("DB-TEST-01", "voltage", "240V", "480V", "test_reviewer", datetime.utcnow().isoformat(), "test correction")
+    await log_edit("DB-TEST-01", "voltage", "240V", "480V", "test_reviewer", datetime.now(timezone.utc).isoformat(), "test correction")
     edits = await get_product_edits("DB-TEST-01")
     record("Edit log save & retrieve", len(edits) > 0, f"edits_count={len(edits)}")
     record("Edit log content correct", edits[0]["old_value"] == '"240V"' or edits[0]["old_value"] == "240V")
@@ -505,12 +501,222 @@ async def test_human_review(product):
 
 
 # ────────────────────────────────────────────────────────────────
+# 11. FASTAPI HARDENING, INPUT VALIDATION & ERROR HANDLING
+# ────────────────────────────────────────────────────────────────
+def test_hardening_and_endpoints(product):
+    section("11. FASTAPI HARDENING, INPUT VALIDATION & ERROR HANDLING")
+    from fastapi.testclient import TestClient
+    from backend.main import app
+    from backend.config import settings
+
+    client = TestClient(app)
+
+    # 1. Root metadata
+    try:
+        r = client.get("/")
+        record("Root endpoint returns 200", r.status_code == 200)
+        data = r.json()
+        record("Root endpoint response schema", data.get("status") == "online" and "service" in data)
+    except Exception as e:
+        record("Root endpoint test", False, str(e))
+
+    # 2. Health check endpoint
+    try:
+        r = client.get("/api/health")
+        record("Health endpoint returns 200", r.status_code == 200)
+        data = r.json()
+        record("Health endpoint reports healthy status", data.get("status") == "healthy")
+        record("Health endpoint dependency details", data.get("database", {}).get("status") == "healthy")
+        record("Health endpoint VLM mode reported without secrets", data.get("vlm_mode") in ["live_claude", "fallback_demo"])
+    except Exception as e:
+        record("Health endpoint test", False, str(e))
+
+    # 3. Upload validation: empty files list
+    try:
+        r = client.post("/api/upload", files=[])
+        record("Upload validation: reject empty upload", r.status_code in [400, 422])
+    except Exception as e:
+        record("Upload validation: empty upload", False, str(e))
+
+    # 4. Upload validation: invalid file extension
+    try:
+        r = client.post("/api/upload", files=[("files", ("malicious.exe", b"binary content", "application/octet-stream"))])
+        record("Upload validation: reject invalid extension (.exe)", r.status_code == 400)
+        data = r.json()
+        record("Upload validation: returns structured ErrorResponse", "error_code" in data and "message" in data)
+    except Exception as e:
+        record("Upload validation: invalid extension", False, str(e))
+
+    # 5. Upload validation: empty file (0 bytes)
+    try:
+        r = client.post("/api/upload", files=[("files", ("empty_datasheet.pdf", b"", "application/pdf"))])
+        record("Upload validation: reject 0-byte file", r.status_code == 400)
+    except Exception as e:
+        record("Upload validation: 0-byte file", False, str(e))
+
+    # 6. Upload valid CSV file
+    try:
+        r = client.post("/api/upload", files=[("files", ("test_sample.csv", b"product_name,model_number\nMotorA,M-1", "text/csv"))])
+        record("Upload valid source file succeeds", r.status_code == 200 and r.json().get("status") == "success")
+    except Exception as e:
+        record("Upload valid source file", False, str(e))
+
+    # 7. Unknown product ID returns 404 with structured error
+    try:
+        r = client.get("/api/products/NONEXISTENT_PRODUCT_ID_12345")
+        record("Unknown product ID returns 404", r.status_code == 404)
+        data = r.json()
+        record("404 returns ErrorResponse with error_code='NOT_FOUND'", data.get("error_code") == "NOT_FOUND")
+    except Exception as e:
+        record("Unknown product 404 test", False, str(e))
+
+    # 8. Unknown product history returns 404
+    try:
+        r = client.get("/api/products/NONEXISTENT_PRODUCT_ID_12345/history")
+        record("Unknown product history returns 404", r.status_code == 404)
+    except Exception as e:
+        record("Unknown product history 404 test", False, str(e))
+
+    # 9. Unknown product approve returns 404
+    try:
+        r = client.post("/api/products/NONEXISTENT_PRODUCT_ID_12345/approve")
+        record("Unknown product approve returns 404", r.status_code == 404)
+    except Exception as e:
+        record("Unknown product approve 404 test", False, str(e))
+
+    # 10. Pipeline run validation: empty source_ids returns 422 / 400
+    try:
+        r = client.post("/api/pipeline/run", json={"source_ids": []})
+        record("Pipeline run validation: reject empty source_ids", r.status_code in [400, 422])
+    except Exception as e:
+        record("Pipeline run empty source_ids test", False, str(e))
+
+    # 11. CORS headers verification
+    try:
+        r = client.options(
+            "/api/products",
+            headers={"Origin": "http://localhost:5173", "Access-Control-Request-Method": "GET"}
+        )
+        record("CORS: preflight returns allow-origin header", "access-control-allow-origin" in r.headers)
+    except Exception as e:
+        record("CORS preflight test", False, str(e))
+
+    # 12. Knowledge graph export endpoint returns 200
+    try:
+        r = client.get("/api/graph")
+        record("Graph export returns 200", r.status_code == 200)
+        data = r.json()
+        record("Graph export contains nodes and links arrays", "nodes" in data and "links" in data)
+    except Exception as e:
+        record("Graph export test", False, str(e))
+
+    # 13. PipelineProgressTracker failure state capture
+    try:
+        from backend.pipeline import PipelineProgressTracker
+        test_tracker = PipelineProgressTracker("test_job_fail")
+        test_tracker.update("failed", 40, "Simulated worker failure", error="WorkerCrashError")
+        record("Job tracker captures failure state", test_tracker.stage == "failed" and test_tracker.error == "WorkerCrashError")
+    except Exception as e:
+        record("Job tracker failure test", False, str(e))
+
+
+# ────────────────────────────────────────────────────────────────
+# 12. UNIT NORMALIZATION, TRUST BOUNDARY & PROVENANCE PRESERVATION
+# ────────────────────────────────────────────────────────────────
+def test_normalization_and_trust_boundary():
+    section("12. UNIT NORMALIZATION, TRUST BOUNDARY & PROVENANCE PRESERVATION")
+    from backend.models import FieldValue, Provenance
+    from backend.normalize import normalize_field_value, canonicalize_field_name
+    from backend.extract import extract_from_pdf_pypdf
+
+    # 1. Canonical field name resolution
+    record("Canonicalize 'rated_power' -> 'power_watts'", canonicalize_field_name("rated_power") == "power_watts")
+    record("Canonicalize 'operating_voltage' -> 'voltage'", canonicalize_field_name("operating_voltage") == "voltage")
+    record("Canonicalize 'net_weight' -> 'weight_kg'", canonicalize_field_name("net_weight") == "weight_kg")
+
+    # 2. Power normalization: kW to W
+    p_kw = FieldValue(
+        value=15.0,
+        unit="kW",
+        provenance=[Provenance(source_id="doc1", source_type="pdf", location="Page 1", extraction_method="test", confidence=0.9)]
+    )
+    norm_p_kw = normalize_field_value("power_watts", p_kw)
+    record("Power 15 kW -> 15000W", norm_p_kw.value == "15000W" and norm_p_kw.unit == "W", f"value={norm_p_kw.value}")
+    record("Power provenance records raw_value and normalization_rule", norm_p_kw.provenance[0].raw_value == 15.0 and "Converted 15.0 kW to Watts" in (norm_p_kw.provenance[0].normalization_rule or ""))
+
+    # 3. Power normalization: HP to W
+    p_hp = FieldValue(
+        value=20.0,
+        unit="HP",
+        provenance=[Provenance(source_id="doc2", source_type="pdf", location="Page 1", extraction_method="test", confidence=0.9)]
+    )
+    norm_p_hp = normalize_field_value("power_watts", p_hp)
+    record("Power 20 HP -> 14914.0W", norm_p_hp.value == "14914.0W" and norm_p_hp.unit == "W", f"value={norm_p_hp.value}")
+
+    # 4. Voltage normalization: kV to V
+    v_kv = FieldValue(
+        value=0.48,
+        unit="kV",
+        provenance=[Provenance(source_id="doc3", source_type="pdf", location="Page 1", extraction_method="test", confidence=0.9)]
+    )
+    norm_v_kv = normalize_field_value("voltage", v_kv)
+    record("Voltage 0.48 kV -> 480V", norm_v_kv.value == "480V" and norm_v_kv.unit == "V", f"value={norm_v_kv.value}")
+
+    # 5. Weight normalization: lbs to kg
+    w_lbs = FieldValue(
+        value=106.9,
+        unit="lbs",
+        provenance=[Provenance(source_id="doc4", source_type="pdf", location="Page 1", extraction_method="test", confidence=0.9)]
+    )
+    norm_w_lbs = normalize_field_value("weight_kg", w_lbs)
+    record("Weight 106.9 lbs -> 48.49 kg", norm_w_lbs.value == 48.49 and norm_w_lbs.unit == "kg", f"value={norm_w_lbs.value}")
+
+    # 6. Temperature normalization: °F to °C
+    t_f = FieldValue(
+        value=104.0,
+        unit="°F",
+        provenance=[Provenance(source_id="doc5", source_type="pdf", location="Page 1", extraction_method="test", confidence=0.9)]
+    )
+    norm_t_f = normalize_field_value("operating_temp", t_f)
+    record("Temp 104°F -> 40.0°C", norm_t_f.value == "40.0°C" and norm_t_f.unit == "°C", f"value={norm_t_f.value}")
+
+    # 7. Dimensions normalization: inches to mm
+    d_in = FieldValue(
+        value=10.0,
+        unit="inches",
+        provenance=[Provenance(source_id="doc6", source_type="pdf", location="Page 1", extraction_method="test", confidence=0.9)]
+    )
+    norm_d_in = normalize_field_value("dimensions_mm", d_in)
+    record("Dimensions 10 inches -> 254.0 mm", norm_d_in.value == 254.0 and norm_d_in.unit == "mm", f"value={norm_d_in.value}")
+
+    # 8. Real fixture pypdf text extraction
+    try:
+        sample_pdf = Path("test_data/sample_datasheet.pdf")
+        if sample_pdf.exists():
+            real_pdf_fields = extract_from_pdf_pypdf(str(sample_pdf), "source_real_pdf")
+            record("Real PDF text extraction succeeds via pypdf", len(real_pdf_fields) >= 3, f"fields={list(real_pdf_fields.keys())}")
+            if "manufacturer" in real_pdf_fields:
+                mfr_field = real_pdf_fields["manufacturer"]
+                record("Real PDF provenance is_synthetic=False", mfr_field.is_synthetic is False)
+                record("Real PDF observation_type='directly_observed'", mfr_field.observation_type == "directly_observed")
+                record("Real PDF extraction_method='pypdf-text-extraction'", mfr_field.provenance[0].extraction_method == "pypdf-text-extraction")
+    except Exception as e:
+        record("Real PDF pypdf extraction", False, str(e))
+
+    # 9. Synthetic demo distinction
+    from backend.extract import fallback_pdf_extraction
+    synth_fields = fallback_pdf_extraction("dummy.pdf", "source_synth_pdf")
+    record("Synthetic fallback returns is_synthetic=True", synth_fields["product_name"].is_synthetic is True)
+    record("Synthetic fallback observation_type='heuristically_inferred'", synth_fields["product_name"].observation_type == "heuristically_inferred")
+
+
+# ────────────────────────────────────────────────────────────────
 # MAIN RUNNER
 # ────────────────────────────────────────────────────────────────
 async def main():
     print("\n" + "#"*60)
     print("  SPECTRA AI -- FULL E2E TEST SUITE")
-    print("  " + datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"))
+    print("  " + datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"))
     print("#"*60)
 
     test_data_models()
@@ -523,6 +729,8 @@ async def main():
     await test_database()
     product = await test_pipeline()
     await test_human_review(product)
+    test_hardening_and_endpoints(product)
+    test_normalization_and_trust_boundary()
 
     # ── Summary ──
     section("FINAL TEST REPORT SUMMARY")
@@ -548,7 +756,7 @@ async def main():
     # Write structured JSON report
     report_path = Path(__file__).parent / "test_report.json"
     report = {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "total": total,
         "passed": passed,
         "failed": failed,
@@ -561,4 +769,9 @@ async def main():
     return report
 
 if __name__ == "__main__":
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
     report = asyncio.run(main())

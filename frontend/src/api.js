@@ -43,11 +43,11 @@ export async function fetchProduct(productId) {
   return res.json();
 }
 
-export async function editField(productId, fieldName, value, unit = null, reviewer = 'human_reviewer') {
+export async function editField(productId, fieldName, value, unit = null, reviewer = 'human_reviewer', reason = 'Human correction applied') {
   const res = await fetch(`${API_BASE}/products/${productId}/fields/${fieldName}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ value, unit, reviewer, reason: 'human_correction' }),
+    body: JSON.stringify({ value, unit, reviewer, reason }),
   });
   if (!res.ok) throw new Error('Failed to update field');
   return res.json();

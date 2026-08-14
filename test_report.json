@@ -1,7 +1,7 @@
 {
-  "timestamp": "2026-08-13T16:22:35.053983",
-  "total": 95,
-  "passed": 95,
+  "timestamp": "2026-08-14T12:37:58.511796+00:00",
+  "total": 131,
+  "passed": 131,
   "failed": 0,
   "pass_rate": "100.0%",
   "results": [
@@ -73,7 +73,7 @@
     {
       "test": "ProductRecord JSON round-trip",
       "status": "[PASS]",
-      "detail": "JSON size=1533 bytes"
+      "detail": "JSON size=2015 bytes"
     },
     {
       "test": "Detect 'datasheet.pdf' \u2192 pdf",
@@ -98,12 +98,12 @@
     {
       "test": "Register CSV source",
       "status": "[PASS]",
-      "detail": "source_id=csv_b6595a182a82, type=csv"
+      "detail": "source_id=csv_f6cab32e95d3, type=csv"
     },
     {
       "test": "Source ID hash prefix",
       "status": "[PASS]",
-      "detail": "csv_b6595a182a82"
+      "detail": "csv_f6cab32e95d3"
     },
     {
       "test": "PDF fallback extraction returns fields",
@@ -318,7 +318,7 @@
     {
       "test": "Database initialized",
       "status": "[PASS]",
-      "detail": "path=C:\\Users\\Dheer\\Desktop\\MY PROJECTS\\UNIHACK\\SpectraAI\\backend\\product_intelligence.db"
+      "detail": "path=C:\\Users\\viswa\\Desktop\\SpectraAI\\backend\\product_intelligence.db"
     },
     {
       "test": "Source save & retrieve",
@@ -479,6 +479,186 @@
       "test": "Audit trail: edits persisted in DB",
       "status": "[PASS]",
       "detail": "db_edits=2"
+    },
+    {
+      "test": "Root endpoint returns 200",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Root endpoint response schema",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Health endpoint returns 200",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Health endpoint reports healthy status",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Health endpoint dependency details",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Health endpoint VLM mode reported without secrets",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Upload validation: reject empty upload",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Upload validation: reject invalid extension (.exe)",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Upload validation: returns structured ErrorResponse",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Upload validation: reject 0-byte file",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Upload valid source file succeeds",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Unknown product ID returns 404",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "404 returns ErrorResponse with error_code='NOT_FOUND'",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Unknown product history returns 404",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Unknown product approve returns 404",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Pipeline run validation: reject empty source_ids",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "CORS: preflight returns allow-origin header",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Graph export returns 200",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Graph export contains nodes and links arrays",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Job tracker captures failure state",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Canonicalize 'rated_power' -> 'power_watts'",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Canonicalize 'operating_voltage' -> 'voltage'",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Canonicalize 'net_weight' -> 'weight_kg'",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Power 15 kW -> 15000W",
+      "status": "[PASS]",
+      "detail": "value=15000W"
+    },
+    {
+      "test": "Power provenance records raw_value and normalization_rule",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Power 20 HP -> 14914.0W",
+      "status": "[PASS]",
+      "detail": "value=14914.0W"
+    },
+    {
+      "test": "Voltage 0.48 kV -> 480V",
+      "status": "[PASS]",
+      "detail": "value=480V"
+    },
+    {
+      "test": "Weight 106.9 lbs -> 48.49 kg",
+      "status": "[PASS]",
+      "detail": "value=48.49"
+    },
+    {
+      "test": "Temp 104\u00b0F -> 40.0\u00b0C",
+      "status": "[PASS]",
+      "detail": "value=40.0\u00b0C"
+    },
+    {
+      "test": "Dimensions 10 inches -> 254.0 mm",
+      "status": "[PASS]",
+      "detail": "value=254.0"
+    },
+    {
+      "test": "Real PDF text extraction succeeds via pypdf",
+      "status": "[PASS]",
+      "detail": "fields=['product_name', 'manufacturer', 'model_number', 'category', 'voltage', 'power_watts', 'weight_kg', 'certifications', 'description_long']"
+    },
+    {
+      "test": "Real PDF provenance is_synthetic=False",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Real PDF observation_type='directly_observed'",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Real PDF extraction_method='pypdf-text-extraction'",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Synthetic fallback returns is_synthetic=True",
+      "status": "[PASS]",
+      "detail": ""
+    },
+    {
+      "test": "Synthetic fallback observation_type='heuristically_inferred'",
+      "status": "[PASS]",
+      "detail": ""
     }
   ]
 }

@@ -1,0 +1,15 @@
+# SpectraAI Code Owners
+# The maintainers listed below are responsible for code review and repository governance.
+
+# Global ownership
+* @dheeraj0677
+
+# Backend & Extraction Pipeline
+/backend/ @dheeraj0677
+/tests/ @dheeraj0677
+
+# Frontend Dashboard
+/frontend/ @dheeraj0677
+
+# CI/CD Workflows
+/.github/ @dheeraj0677
