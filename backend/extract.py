@@ -1,4 +1,5 @@
 import os
+import re
 import csv
 import json
 import base64
@@ -6,7 +7,9 @@ import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 import anthropic
+from pypdf import PdfReader
 from backend.models import FieldValue, Provenance
+from backend.normalize import normalize_field_value, canonicalize_field_name
 
 logger = logging.getLogger("extract")
 
@@ -59,98 +62,161 @@ def get_anthropic_client() -> Optional[anthropic.Anthropic]:
         return anthropic.Anthropic(api_key=api_key)
     return None
 
+def extract_from_pdf_pypdf(pdf_path: str, source_id: str) -> Dict[str, FieldValue]:
+    """Real offline text extraction and spec parsing from PDF documents using pypdf."""
+    results = {}
+    try:
+        reader = PdfReader(pdf_path)
+        full_text = ""
+        page_texts = []
+        for i, page in enumerate(reader.pages):
+            text = page.extract_text() or ""
+            page_texts.append((i + 1, text))
+            full_text += f"\n--- Page {i+1} ---\n" + text
+
+        if len(full_text.strip()) < 20:
+            return results
+
+        # Heuristic extraction patterns for standard technical spec lines
+        patterns = [
+            ("product_name", r"(?:product\s*name|datasheet|item)[\s:]+([^\n\r]+)", "Page 1, Header"),
+            ("manufacturer", r"(?:manufacturer|brand|mfr|company)[\s:]+([^\n\r]+)", "Page 1, Header"),
+            ("model_number", r"(?:model|model\s*number|model\s*no\.?|mpn)[\s:]+([^\n\r]+)", "Page 1, Specifications"),
+            ("category", r"(?:category|type|product\s*family)[\s:]+([^\n\r]+)", "Page 1, Classification"),
+            ("voltage", r"(?:voltage|rated\s*voltage|operating\s*voltage)[\s:]+([^\n\r]+)", "Electrical Specs"),
+            ("power_watts", r"(?:power|power\s*rating|rated\s*power)[\s:]+([^\n\r]+)", "Electrical Specs"),
+            ("weight_kg", r"(?:weight|net\s*weight|mass)[\s:]+([^\n\r]+)", "Physical Specs"),
+            ("certifications", r"(?:certifications|compliance|standards)[\s:]+([^\n\r]+)", "Compliance Section"),
+            ("description_long", r"(?:description|overview)[\s:]+([^\n\r]+)", "Overview"),
+        ]
+
+        for fname, pattern, default_loc in patterns:
+            for page_num, text in page_texts:
+                match = re.search(pattern, text, re.IGNORECASE)
+                if match:
+                    val_str = match.group(1).strip()
+                    if val_str and fname not in results:
+                        prov = Provenance(
+                            source_id=source_id,
+                            source_type="pdf",
+                            location=f"Page {page_num}, {default_loc}",
+                            extraction_method="pypdf-text-extraction",
+                            confidence=0.92,
+                            raw_snippet=f"{match.group(0)[:60]}...",
+                            is_synthetic=False,
+                            observation_type="directly_observed"
+                        )
+                        fv = FieldValue(
+                            value=val_str,
+                            confidence=0.92,
+                            provenance=[prov],
+                            status="extracted",
+                            is_synthetic=False,
+                            observation_type="directly_observed"
+                        )
+                        results[fname] = normalize_field_value(fname, fv)
+                        break
+
+    except Exception as e:
+        logger.warning(f"pypdf extraction failed for {pdf_path}: {e}")
+
+    return results
+
 def extract_from_pdf(pdf_path: str, source_id: str) -> Dict[str, FieldValue]:
+    """Extract structured specs from PDF using Claude Vision, pypdf text parser, or demo fallback."""
     client = get_anthropic_client()
     file_path = Path(pdf_path)
-    
-    if not client:
-        logger.warning(f"No ANTHROPIC_API_KEY found. Using heuristic/fallback extraction for PDF {file_path.name}")
-        return fallback_pdf_extraction(pdf_path, source_id)
-        
-    try:
-        pdf_bytes = file_path.read_bytes()
-        pdf_b64 = base64.b64encode(pdf_bytes).decode("utf-8")
-        
-        response = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=4000,
-            output_config={"format": {"type": "json_schema", "schema": EXTRACTION_SCHEMA}},
-            messages=[{
-                "role": "user",
-                "content": [
-                    {
-                        "type": "document",
-                        "source": {
-                            "type": "base64",
-                            "media_type": "application/pdf",
-                            "data": pdf_b64
-                        }
-                    },
-                    {"type": "text", "text": EXTRACTION_PROMPT}
-                ]
-            }]
-        )
-        
-        raw_text = response.content[0].text
-        data = json.loads(raw_text)
-        return parse_extracted_fields(data.get("fields", []), source_id, source_type="pdf", method="claude-vision-extraction")
-    except Exception as e:
-        logger.error(f"Error calling Claude for PDF {file_path.name}: {e}. Falling back...")
-        return fallback_pdf_extraction(pdf_path, source_id)
+
+    # 1. If Claude API client is configured, use multimodal vision
+    if client:
+        try:
+            pdf_bytes = file_path.read_bytes()
+            pdf_b64 = base64.b64encode(pdf_bytes).decode("utf-8")
+
+            response = client.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=4000,
+                output_config={"format": {"type": "json_schema", "schema": EXTRACTION_SCHEMA}},
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "document",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "application/pdf",
+                                "data": pdf_b64
+                            }
+                        },
+                        {"type": "text", "text": EXTRACTION_PROMPT}
+                    ]
+                }]
+            )
+
+            raw_text = response.content[0].text
+            data = json.loads(raw_text)
+            return parse_extracted_fields(data.get("fields", []), source_id, source_type="pdf", method="claude-vision-extraction", is_synthetic=False)
+        except Exception as e:
+            logger.error(f"Error calling Claude for PDF {file_path.name}: {e}. Trying offline text extraction...")
+
+    # 2. Try offline real text parsing via pypdf
+    if file_path.exists():
+        real_extracted = extract_from_pdf_pypdf(str(file_path), source_id)
+        if len(real_extracted) >= 3:
+            logger.info(f"Successfully extracted {len(real_extracted)} fields from real PDF via pypdf.")
+            return real_extracted
+
+    # 3. Fallback to synthetic demo data
+    logger.info(f"Using synthetic demo fallback for PDF {file_path.name}")
+    return fallback_pdf_extraction(pdf_path, source_id)
 
 def extract_from_image(image_path: str, source_id: str) -> Dict[str, FieldValue]:
+    """Extract structured specs from Image using Claude Vision or demo fallback."""
     client = get_anthropic_client()
     file_path = Path(image_path)
-    
-    if not client:
-        logger.warning(f"No ANTHROPIC_API_KEY found. Using fallback extraction for Image {file_path.name}")
-        return fallback_image_extraction(image_path, source_id)
-        
-    try:
-        img_bytes = file_path.read_bytes()
-        img_b64 = base64.b64encode(img_bytes).decode("utf-8")
-        
-        # Determine media type
-        ext = file_path.suffix.lower()
-        media_type = "image/png"
-        if ext in [".jpg", ".jpeg"]:
-            media_type = "image/jpeg"
-        elif ext == ".webp":
-            media_type = "image/webp"
 
-        response = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=4000,
-            output_config={"format": {"type": "json_schema", "schema": EXTRACTION_SCHEMA}},
-            messages=[{
-                "role": "user",
-                "content": [
-                    {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": media_type,
-                            "data": img_b64
-                        }
-                    },
-                    {"type": "text", "text": EXTRACTION_PROMPT}
-                ]
-            }]
-        )
-        
-        raw_text = response.content[0].text
-        data = json.loads(raw_text)
-        return parse_extracted_fields(data.get("fields", []), source_id, source_type="image", method="claude-vision-extraction")
-    except Exception as e:
-        logger.error(f"Error calling Claude for Image {file_path.name}: {e}. Falling back...")
-        return fallback_image_extraction(image_path, source_id)
+    if client:
+        try:
+            image_bytes = file_path.read_bytes()
+            ext = file_path.suffix.lower().replace(".", "")
+            media_type = f"image/{ext}" if ext in ["png", "jpeg", "webp", "gif"] else "image/jpeg"
+            img_b64 = base64.b64encode(image_bytes).decode("utf-8")
+
+            response = client.messages.create(
+                model="claude-sonnet-4-6",
+                max_tokens=2000,
+                output_config={"format": {"type": "json_schema", "schema": EXTRACTION_SCHEMA}},
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": media_type,
+                                "data": img_b64
+                            }
+                        },
+                        {"type": "text", "text": EXTRACTION_PROMPT}
+                    ]
+                }]
+            )
+
+            raw_text = response.content[0].text
+            data = json.loads(raw_text)
+            return parse_extracted_fields(data.get("fields", []), source_id, source_type="image", method="claude-vision-extraction", is_synthetic=False)
+        except Exception as e:
+            logger.error(f"Error calling Claude for Image {file_path.name}: {e}. Falling back...")
+
+    return fallback_image_extraction(image_path, source_id)
 
 def extract_from_csv(csv_path: str, source_id: str) -> Dict[str, FieldValue]:
+    """Extract structured fields directly from CSV records."""
     results = {}
     file_path = Path(csv_path)
     if not file_path.exists():
         return results
-        
+
     try:
         with open(file_path, mode="r", encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)
@@ -160,34 +226,45 @@ def extract_from_csv(csv_path: str, source_id: str) -> Dict[str, FieldValue]:
                 for key, raw_val in row.items():
                     if not raw_val or not raw_val.strip():
                         continue
-                    clean_key = key.strip().lower().replace(" ", "_")
+                    clean_key = canonicalize_field_name(key)
                     val_str = raw_val.strip()
-                    
+
                     prov = Provenance(
                         source_id=source_id,
                         source_type="csv",
                         location=f"CSV row {row_idx}, column '{key}'",
                         extraction_method="csv-direct",
                         confidence=0.95,
-                        raw_snippet=f"{key}: {val_str}"
+                        raw_snippet=f"{key}: {val_str}",
+                        is_synthetic=False,
+                        observation_type="directly_observed"
                     )
-                    
-                    results[clean_key] = FieldValue(
+
+                    raw_fv = FieldValue(
                         value=val_str,
                         unit=None,
                         confidence=0.95,
                         provenance=[prov],
-                        status="extracted"
+                        status="extracted",
+                        is_synthetic=False,
+                        observation_type="directly_observed"
                     )
+                    results[clean_key] = normalize_field_value(clean_key, raw_fv)
     except Exception as e:
         logger.error(f"Failed to extract CSV {csv_path}: {e}")
-        
+
     return results
 
-def parse_extracted_fields(fields: List[Dict[str, Any]], source_id: str, source_type: str, method: str) -> Dict[str, FieldValue]:
+def parse_extracted_fields(
+    fields: List[Dict[str, Any]],
+    source_id: str,
+    source_type: str,
+    method: str,
+    is_synthetic: bool = False
+) -> Dict[str, FieldValue]:
     results = {}
     for f in fields:
-        fname = f.get("field_name", "").strip().lower().replace(" ", "_")
+        fname = canonicalize_field_name(f.get("field_name", ""))
         if not fname:
             continue
         val = f.get("value")
@@ -195,111 +272,97 @@ def parse_extracted_fields(fields: List[Dict[str, Any]], source_id: str, source_
         conf = float(f.get("confidence", 0.8))
         loc = f.get("location", "document body")
         snip = f.get("raw_snippet", str(val))
-        
+
         prov = Provenance(
             source_id=source_id,
-            source_type=source_type, # type: ignore
+            source_type=source_type,  # type: ignore
             location=loc,
             extraction_method=method,
             confidence=conf,
-            raw_snippet=snip
+            raw_snippet=snip,
+            is_synthetic=is_synthetic,
+            observation_type="heuristically_inferred" if is_synthetic else "directly_observed"
         )
-        
-        results[fname] = FieldValue(
+
+        raw_fv = FieldValue(
             value=val,
             unit=unit,
             confidence=conf,
             provenance=[prov],
-            status="extracted"
+            status="extracted",
+            is_synthetic=is_synthetic,
+            observation_type="heuristically_inferred" if is_synthetic else "directly_observed"
         )
+        results[fname] = normalize_field_value(fname, raw_fv)
     return results
 
 def fallback_pdf_extraction(pdf_path: str, source_id: str) -> Dict[str, FieldValue]:
-    """Smart fallback when API key is not present or offline demo testing."""
-    filename = Path(pdf_path).name.lower()
+    """Explicit synthetic fallback when API key is absent and pypdf has insufficient text."""
     results = {}
-    
-    # Heuristic matching based on filename or dummy extraction for demo
-    results["product_name"] = FieldValue(
-        value="UltraDrive X500 Industrial Inverter Motor",
-        confidence=0.92,
-        status="extracted",
-        provenance=[Provenance(source_id=source_id, source_type="pdf", location="Page 1, Header", extraction_method="pdf-parser-fallback", confidence=0.92, raw_snippet="UltraDrive X500 Industrial Variable Speed Drive Motor")]
-    )
-    results["manufacturer"] = FieldValue(
-        value="Vortex Dynamics Tech",
-        confidence=0.95,
-        status="extracted",
-        provenance=[Provenance(source_id=source_id, source_type="pdf", location="Page 1, Title Block", extraction_method="pdf-parser-fallback", confidence=0.95, raw_snippet="Vortex Dynamics Tech Corp")]
-    )
-    results["model_number"] = FieldValue(
-        value="VD-X500-480V-3P",
-        confidence=0.90,
-        status="extracted",
-        provenance=[Provenance(source_id=source_id, source_type="pdf", location="Page 2, Spec Sheet", extraction_method="pdf-parser-fallback", confidence=0.90, raw_snippet="Model: VD-X500-480V-3P")]
-    )
-    results["category"] = FieldValue(
-        value="Industrial Motors & Drives",
-        confidence=0.88,
-        status="extracted",
-        provenance=[Provenance(source_id=source_id, source_type="pdf", location="Page 1, Taxonomy", extraction_method="pdf-parser-fallback", confidence=0.88, raw_snippet="Category: Heavy Industrial Electric Motors")]
-    )
-    results["weight_kg"] = FieldValue(
-        value=48.5,
-        unit="kg",
-        confidence=0.89,
-        status="extracted",
-        provenance=[Provenance(source_id=source_id, source_type="pdf", location="Page 12, Physical Specs Table", extraction_method="pdf-parser-fallback", confidence=0.89, raw_snippet="Net Weight: 48.5 kg (106.9 lbs)")]
-    )
-    results["voltage"] = FieldValue(
-        value="480V",
-        unit="V",
-        confidence=0.85,
-        status="extracted",
-        provenance=[Provenance(source_id=source_id, source_type="pdf", location="Page 3, Electrical Characteristics", extraction_method="pdf-parser-fallback", confidence=0.85, raw_snippet="Rated Voltage: 480V AC 3-Phase 60Hz")]
-    )
-    results["description_long"] = FieldValue(
-        value="The UltraDrive X500 is a high-performance 480V 3-Phase variable frequency drive designed for heavy industrial automation, conveying systems, and HVAC pumps.",
-        confidence=0.90,
-        status="extracted",
-        provenance=[Provenance(source_id=source_id, source_type="pdf", location="Page 1, Overview", extraction_method="pdf-parser-fallback", confidence=0.90, raw_snippet="High-performance VFD motor for industrial applications.")]
-    )
-    results["certifications"] = FieldValue(
-        value="CE, UL 508C, RoHS compliant, IP65 rated",
-        confidence=0.94,
-        status="extracted",
-        provenance=[Provenance(source_id=source_id, source_type="pdf", location="Page 14, Standards & Compliance", extraction_method="pdf-parser-fallback", confidence=0.94, raw_snippet="Certified UL 508C, CE marking, IP65 enclosure.")]
-    )
+
+    def make_synthetic(field: str, val: Any, unit: Optional[str], conf: float, loc: str, snip: str):
+        prov = Provenance(
+            source_id=source_id,
+            source_type="synthetic_demo",
+            location=loc,
+            extraction_method="synthetic-fallback-demo",
+            confidence=conf,
+            raw_snippet=f"[Synthetic Fixture] {snip}",
+            is_synthetic=True,
+            observation_type="heuristically_inferred"
+        )
+        fv = FieldValue(
+            value=val,
+            unit=unit,
+            confidence=conf,
+            status="extracted",
+            provenance=[prov],
+            is_synthetic=True,
+            observation_type="heuristically_inferred"
+        )
+        return normalize_field_value(field, fv)
+
+    results["product_name"] = make_synthetic("product_name", "UltraDrive X500 Industrial Inverter Motor", None, 0.92, "Page 1, Header", "UltraDrive X500 Industrial Variable Speed Drive Motor")
+    results["manufacturer"] = make_synthetic("manufacturer", "Vortex Dynamics Tech", None, 0.95, "Page 1, Title Block", "Vortex Dynamics Tech Corp")
+    results["model_number"] = make_synthetic("model_number", "VD-X500-480V-3P", None, 0.90, "Page 2, Spec Sheet", "Model: VD-X500-480V-3P")
+    results["category"] = make_synthetic("category", "Industrial Motors & Drives", None, 0.88, "Page 1, Taxonomy", "Category: Heavy Industrial Electric Motors")
+    results["weight_kg"] = make_synthetic("weight_kg", 48.5, "kg", 0.89, "Page 12, Physical Specs Table", "Net Weight: 48.5 kg (106.9 lbs)")
+    results["voltage"] = make_synthetic("voltage", "480V", "V", 0.85, "Page 3, Electrical Characteristics", "Rated Voltage: 480V AC 3-Phase 60Hz")
+    results["description_long"] = make_synthetic("description_long", "The UltraDrive X500 is a high-performance 480V 3-Phase variable frequency drive designed for heavy industrial automation.", None, 0.90, "Page 1, Overview", "High-performance VFD motor for industrial applications.")
+    results["certifications"] = make_synthetic("certifications", "CE, UL 508C, RoHS compliant, IP65 rated", None, 0.94, "Page 14, Standards & Compliance", "Certified UL 508C, CE marking, IP65 enclosure.")
+
     return results
 
 def fallback_image_extraction(image_path: str, source_id: str) -> Dict[str, FieldValue]:
-    """Smart fallback for nameplate photo extraction demo."""
+    """Explicit synthetic fallback for motor nameplate image demo (engineered conflict on voltage)."""
     results = {}
-    results["model_number"] = FieldValue(
-        value="VD-X500-480V-3P",
-        confidence=0.96,
-        status="extracted",
-        provenance=[Provenance(source_id=source_id, source_type="image", location="Nameplate photo top line", extraction_method="claude-vision-fallback", confidence=0.96, raw_snippet="MODEL: VD-X500-480V-3P")]
-    )
-    # Intentionally engineer a slight voltage difference (e.g. 460V vs 480V) to demonstrate multi-source conflict resolution!
-    results["voltage"] = FieldValue(
-        value="460V",
-        unit="V",
-        confidence=0.91,
-        status="extracted",
-        provenance=[Provenance(source_id=source_id, source_type="image", location="Nameplate electrical spec block", extraction_method="claude-vision-fallback", confidence=0.91, raw_snippet="VOLTS: 460V 3PH")]
-    )
-    results["power_watts"] = FieldValue(
-        value="15000W",
-        unit="W",
-        confidence=0.93,
-        status="extracted",
-        provenance=[Provenance(source_id=source_id, source_type="image", location="Nameplate rating box", extraction_method="claude-vision-fallback", confidence=0.93, raw_snippet="RATING: 15 kW / 20 HP")]
-    )
-    results["sku"] = FieldValue(
-        value="SKU-VDX500-IND",
-        confidence=0.88,
-        status="extracted",
-        provenance=[Provenance(source_id=source_id, source_type="image", location="Nameplate barcode text", extraction_method="claude-vision-fallback", confidence=0.88, raw_snippet="SKU-VDX500-IND")]
-    )
+
+    def make_synthetic(field: str, val: Any, unit: Optional[str], conf: float, loc: str, snip: str):
+        prov = Provenance(
+            source_id=source_id,
+            source_type="synthetic_demo",
+            location=loc,
+            extraction_method="synthetic-fallback-demo",
+            confidence=conf,
+            raw_snippet=f"[Synthetic Fixture] {snip}",
+            is_synthetic=True,
+            observation_type="heuristically_inferred"
+        )
+        fv = FieldValue(
+            value=val,
+            unit=unit,
+            confidence=conf,
+            status="extracted",
+            provenance=[prov],
+            is_synthetic=True,
+            observation_type="heuristically_inferred"
+        )
+        return normalize_field_value(field, fv)
+
+    results["model_number"] = make_synthetic("model_number", "VD-X500-480V-3P", None, 0.96, "Nameplate photo top line", "MODEL: VD-X500-480V-3P")
+    # Engineered conflict: 460V vs 480V in PDF
+    results["voltage"] = make_synthetic("voltage", "460V", "V", 0.91, "Nameplate electrical spec block", "VOLTS: 460V 3PH")
+    results["power_watts"] = make_synthetic("power_watts", "15000W", "W", 0.93, "Nameplate rating box", "RATING: 15 kW / 20 HP")
+    results["sku"] = make_synthetic("sku", "SKU-VDX500-IND", None, 0.88, "Nameplate barcode text", "SKU-VDX500-IND")
+
     return results

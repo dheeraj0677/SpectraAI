@@ -1,12 +1,15 @@
 import aiosqlite
 import json
+import logging
 from typing import List, Optional, Dict, Any
 from pathlib import Path
 from backend.models import ProductRecord, SourceDocument
 
+logger = logging.getLogger("database")
 DB_PATH = Path(__file__).parent / "product_intelligence.db"
 
 async def init_db():
+    """Initialize database schema with tables for sources, products, and human edits."""
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("""
             CREATE TABLE IF NOT EXISTS sources (
@@ -41,7 +44,20 @@ async def init_db():
                 reason TEXT
             )
         """)
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_products_review_status ON products(review_status)")
+        await db.execute("CREATE INDEX IF NOT EXISTS idx_human_edits_product_id ON human_edits(product_id)")
         await db.commit()
+
+async def check_db_health() -> bool:
+    """Execute a simple query to verify SQLite database readiness."""
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            async with db.execute("SELECT 1") as cursor:
+                row = await cursor.fetchone()
+                return row is not None and row[0] == 1
+    except Exception as e:
+        logger.error(f"Database health check failed: {e}")
+        return False
 
 async def save_source(source: SourceDocument):
     async with aiosqlite.connect(DB_PATH) as db:
@@ -134,3 +150,21 @@ async def get_product_edits(product_id: str) -> List[Dict[str, Any]]:
                 }
                 for r in rows
             ]
+
+async def get_catalog_counts() -> Dict[str, int]:
+    """Retrieve aggregate counts for diagnostics reporting."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT COUNT(*) FROM products") as c:
+            total_products = (await c.fetchone())[0]
+        async with db.execute("SELECT COUNT(*) FROM products WHERE review_status != 'approved'") as c:
+            pending_review = (await c.fetchone())[0]
+        async with db.execute("SELECT COUNT(*) FROM products WHERE review_status = 'approved'") as c:
+            approved = (await c.fetchone())[0]
+        async with db.execute("SELECT COUNT(*) FROM human_edits") as c:
+            total_edits = (await c.fetchone())[0]
+        return {
+            "total_products": total_products,
+            "pending_review": pending_review,
+            "approved": approved,
+            "total_edits": total_edits
+        }
