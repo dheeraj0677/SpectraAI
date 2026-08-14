@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-13T16:22:35.053983",
+  "timestamp": "2026-08-14T11:24:27.176913+00:00",
   "total": 95,
   "passed": 95,
   "failed": 0,
@@ -73,7 +73,7 @@
     {
       "test": "ProductRecord JSON round-trip",
       "status": "[PASS]",
-      "detail": "JSON size=1533 bytes"
+      "detail": "JSON size=1535 bytes"
     },
     {
       "test": "Detect 'datasheet.pdf' \u2192 pdf",
@@ -98,12 +98,12 @@
     {
       "test": "Register CSV source",
       "status": "[PASS]",
-      "detail": "source_id=csv_b6595a182a82, type=csv"
+      "detail": "source_id=csv_f6cab32e95d3, type=csv"
     },
     {
       "test": "Source ID hash prefix",
       "status": "[PASS]",
-      "detail": "csv_b6595a182a82"
+      "detail": "csv_f6cab32e95d3"
     },
     {
       "test": "PDF fallback extraction returns fields",
@@ -318,7 +318,7 @@
     {
       "test": "Database initialized",
       "status": "[PASS]",
-      "detail": "path=C:\\Users\\Dheer\\Desktop\\MY PROJECTS\\UNIHACK\\SpectraAI\\backend\\product_intelligence.db"
+      "detail": "path=C:\\Users\\viswa\\Desktop\\SpectraAI\\backend\\product_intelligence.db"
     },
     {
       "test": "Source save & retrieve",

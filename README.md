@@ -51,7 +51,7 @@ In under a minute, **SpectraAI**:
 
 | Layer | Technology | Why |
 |-------|-----------|-----|
-| Backend | Python 3.12 + FastAPI + Pydantic v2 | Fast to write, Swagger UI as fallback demo |
+| Backend | Python ≥3.12 (tested 3.13) + FastAPI + Pydantic v2 | Fast to write, Swagger UI as fallback demo |
 | VLM | Claude Sonnet via `output_config.format` | Best-in-class vision + guaranteed JSON schema output |
 | Orchestration | Custom ~200-line pipeline | No LangChain overhead — fast, transparent, debuggable |
 | RAG | Embedded seed KB retriever | Small, curated, defensible — judges can ask "where did that come from?" |
@@ -68,6 +68,7 @@ In under a minute, **SpectraAI**:
 cd backend
 pip install -r requirements.txt
 set ANTHROPIC_API_KEY=your-key-here   # Optional — smart fallback mode if absent
+# Note: the anthropic package must be installed even in fallback mode (top-level import)
 python main.py
 ```
 → API at `http://localhost:8000` | Swagger at `http://localhost:8000/docs`
@@ -95,3 +96,15 @@ npm run dev
 | Neo4j | NetworkX + D3 delivers the same visual impact with zero server setup |
 | LangChain/LlamaIndex | Custom pipeline is faster to debug and demo |
 | Production Vector DB | Embedded retriever is sufficient and fully explainable |
+
+---
+
+## ⚠️ Known Limitations
+
+| Limitation | Detail |
+|------------|--------|
+| **Fallback mode** | Without `ANTHROPIC_API_KEY`, extraction returns hardcoded synthetic data for the UltraDrive X500 demo product. Real documents are not analysed. |
+| **Test suite** | The 95-test E2E suite runs in fallback mode only. It does not validate live Claude API responses. |
+| **chromadb** | Listed as a dependency in early versions but is **not used** — `enrich.py` uses an in-memory embedded retriever. Removed from `requirements.txt` in v1.1+. |
+| **Single product** | The demo pipeline processes one product at a time. Batch processing endpoints exist but are not stress-tested. |
+| **Python version** | Developed against Python ≥3.12. `datetime.utcnow()` was present in early commits; replaced with timezone-aware equivalents in v1.1+. |

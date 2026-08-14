@@ -1,7 +1,7 @@
 from __future__ import annotations
 from pydantic import BaseModel, Field
 from typing import Optional, Literal, Union, Dict, List, Any
-from datetime import datetime
+from datetime import datetime, timezone
 
 class Provenance(BaseModel):
     source_id: str              # which uploaded document/image/csv row
@@ -21,8 +21,8 @@ class FieldValue(BaseModel):
 
 class ProductRecord(BaseModel):
     product_id: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     # Core identity
     product_name: FieldValue = Field(default_factory=FieldValue)

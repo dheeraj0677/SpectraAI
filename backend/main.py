@@ -6,6 +6,7 @@ import asyncio
 import json
 import uuid
 import logging
+from contextlib import asynccontextmanager
 from typing import List, Optional
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -22,10 +23,34 @@ from backend.models import ProductRecord, HumanEditRequest, PipelineRunRequest
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("main")
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan: initialise DB and pre-seed demo product on startup."""
+    await database.init_db()
+    logger.info("Database initialized successfully.")
+
+    # Pre-seed an initial demo product if database is empty
+    products = await database.list_products()
+    if not products:
+        logger.info("Pre-seeding initial product record for instant demo readiness...")
+        try:
+            await pipeline.run_product_intelligence_pipeline(
+                source_ids=["pdf_demo", "image_demo", "csv_demo"],
+                product_id="PROD-DEMO-X500"
+            )
+        except Exception as e:
+            logger.error(f"Error pre-seeding product: {e}")
+
+    yield  # Application runs here
+    # (shutdown logic can be added here if needed)
+
+
 app = FastAPI(
     title="SpectraAI",
     description="SpectraAI — Multimodal product intelligence with source-cited extraction, RAG enrichment, knowledge graph reasoning, and human-in-the-loop audit trail.",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 # Enable CORS for local dev server (Vite on port 5173 / localhost)
@@ -37,22 +62,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.on_event("startup")
-async def startup_event():
-    await database.init_db()
-    logger.info("Database initialized successfully.")
-    
-    # Pre-seed a initial demo product if database is empty
-    products = await database.list_products()
-    if not products:
-        logger.info("Pre-seeding initial product record for instant demo readiness...")
-        try:
-            await pipeline.run_product_intelligence_pipeline(
-                source_ids=["pdf_demo", "image_demo", "csv_demo"],
-                product_id="PROD-DEMO-X500"
-            )
-        except Exception as e:
-            logger.error(f"Error pre-seeding product: {e}")
 
 @app.get("/")
 def read_root():

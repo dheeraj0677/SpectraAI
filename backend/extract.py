@@ -291,7 +291,7 @@ def fallback_image_extraction(image_path: str, source_id: str) -> Dict[str, Fiel
     )
     results["power_watts"] = FieldValue(
         value="15000W",
-        unit="kW",
+        unit="W",
         confidence=0.93,
         status="extracted",
         provenance=[Provenance(source_id=source_id, source_type="image", location="Nameplate rating box", extraction_method="claude-vision-fallback", confidence=0.93, raw_snippet="RATING: 15 kW / 20 HP")]

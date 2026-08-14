@@ -11,7 +11,7 @@ import io
 import json
 import asyncio
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Fix Windows console encoding
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
@@ -510,7 +510,7 @@ async def test_human_review(product):
 async def main():
     print("\n" + "#"*60)
     print("  SPECTRA AI -- FULL E2E TEST SUITE")
-    print("  " + datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"))
+    print("  " + datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"))
     print("#"*60)
 
     test_data_models()
@@ -548,7 +548,7 @@ async def main():
     # Write structured JSON report
     report_path = Path(__file__).parent / "test_report.json"
     report = {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "total": total,
         "passed": passed,
         "failed": failed,
