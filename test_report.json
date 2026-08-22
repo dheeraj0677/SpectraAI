@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-08-14T12:37:58.511796+00:00",
+  "timestamp": "2026-08-22T12:37:53.580346+00:00",
   "total": 131,
   "passed": 131,
   "failed": 0,
@@ -98,12 +98,12 @@
     {
       "test": "Register CSV source",
       "status": "[PASS]",
-      "detail": "source_id=csv_f6cab32e95d3, type=csv"
+      "detail": "source_id=csv_b6595a182a82, type=csv"
     },
     {
       "test": "Source ID hash prefix",
       "status": "[PASS]",
-      "detail": "csv_f6cab32e95d3"
+      "detail": "csv_b6595a182a82"
     },
     {
       "test": "PDF fallback extraction returns fields",
@@ -318,7 +318,7 @@
     {
       "test": "Database initialized",
       "status": "[PASS]",
-      "detail": "path=C:\\Users\\viswa\\Desktop\\SpectraAI\\backend\\product_intelligence.db"
+      "detail": "path=C:\\Users\\Dheer\\Desktop\\MY PROJECTS\\UNIHACK\\SpectraAI\\backend\\product_intelligence.db"
     },
     {
       "test": "Source save & retrieve",
